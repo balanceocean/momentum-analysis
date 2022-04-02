@@ -17,7 +17,19 @@ DB_Prices <- tq_index("SP500") %>%
   tq_get(get  = "stock.prices",
          from = Sys.Date() - years(history),
          to   = Sys.Date(),
-         complete_cases = TRUE) %>%
+         complete_cases = TRUE)
+
+# Deleting those tickers with less than 500 days of historic data
+Final_List_Tickers <- DB_Prices %>% 
+  dplyr::group_by(symbol) %>%
+  dplyr::tally() %>%
+  dplyr::filter(n > 500) %>%
+  dplyr::select(symbol) %>%
+  pull(1)
+
+# Final calculations
+DB_Prices <- DB_Prices %>%
+  dplyr::filter(symbol %in% Final_List_Tickers) %>%
   dplyr::select(symbol, date, adjusted) %>%
   dplyr::group_by(symbol) %>%
   dplyr::mutate(MA_50  = ifelse(adjusted > TTR::SMA(adjusted, n = 50), 1, 0),
@@ -25,7 +37,6 @@ DB_Prices <- tq_index("SP500") %>%
                 MA_200 = ifelse(adjusted > TTR::SMA(adjusted, n = 200), 1, 0)) %>%
   dplyr::ungroup() %>%
   drop_na()
-
 
 # Splitting the dataframes into the types of Moving Average
 DB_MA_50 <- DB_Prices %>%
@@ -77,39 +88,39 @@ Last_MA_200 <- DB_Global %>%
 # Plotting
 Num_Years <- 6 # Years in the Chart
 
-  # Using Facets
-  DB_Global %>%
-    dplyr::filter(date %>% lubridate::year() >= (Sys.Date() %>% lubridate::year()) - Num_Years) %>%
-    dplyr::mutate(Type = ifelse(Type == "Pct_MA_50", "Above 50 SMA",
-                                ifelse(Type == "Pct_MA_100", "Above 100 SMA", "Above 200 SMA"))) %>%
-    ggplot(aes(x = date, y = Percentage, colour = Type)) +
-    geom_line(size = 1) +
-    scale_color_viridis_d(end = 0.9) +
-    theme_minimal() +
-    labs(title = "SP500 - Momentum Analysis (Percentage of companies above their Simple Moving Average)",
-         subtitle = str_glue("Current Values - Above SMA50: {Last_MA_50}. Above SMA100: {Last_MA_100}. Above SMA200: {Last_MA_200}"),
-         caption = "By: Carlos Jimenez\nSource: Yahoo Finance",
-         y       = "Percentage of Companies",
-         x       = "Dates") +
-    scale_y_continuous(labels = scales::percent) +
-    theme(legend.position = "bottom",
-          legend.title    = element_blank()) +
-    facet_wrap( ~ Type,  ncol = 3, strip.position = "left")
-  
-  # All in the same plot
-  DB_Global %>%
-    dplyr::filter(date %>% lubridate::year() >= (Sys.Date() %>% lubridate::year()) - Num_Years) %>%
-    dplyr::mutate(Type = ifelse(Type == "Pct_MA_50", "Above 50 SMA",
-                                ifelse(Type == "Pct_MA_100", "Above 100 SMA", "Above 200 SMA"))) %>%
-    ggplot(aes(x = date, y = Percentage, colour = Type)) +
-    geom_line(size = 1) +
-    scale_color_viridis_d(end = 0.9) +
-    theme_minimal() +
-    labs(title = "SP500 - Momentum Analysis (Percentage of companies above their Simple Moving Average)",
-         subtitle = str_glue("Above SMA50: {Last_MA_50}. Above SMA100: {Last_MA_100}. Above SMA200: {Last_MA_200}"),
-         caption = "By: Carlos Jimenez\nSource: Yahoo Finance",
-         y       = "Percentage of Companies",
-         x       = "Dates") +
-    scale_y_continuous(labels = scales::percent) +
-    theme(legend.position = "bottom",
-          legend.title    = element_blank())
+# Using Facets
+DB_Global %>%
+  dplyr::filter(date %>% lubridate::year() >= (Sys.Date() %>% lubridate::year()) - Num_Years) %>%
+  dplyr::mutate(Type = ifelse(Type == "Pct_MA_50", "Above 50 SMA",
+                              ifelse(Type == "Pct_MA_100", "Above 100 SMA", "Above 200 SMA"))) %>%
+  ggplot(aes(x = date, y = Percentage, colour = Type)) +
+  geom_line(size = 1) +
+  scale_color_viridis_d(end = 0.9) +
+  theme_minimal() +
+  labs(title = "SP500 - Momentum Analysis (Percentage of companies above their Simple Moving Average)",
+       subtitle = str_glue("Current Values - Above SMA50: {Last_MA_50}. Above SMA100: {Last_MA_100}. Above SMA200: {Last_MA_200}"),
+       caption = "By: Carlos Jimenez\nSource: Yahoo Finance",
+       y       = "Percentage of Companies",
+       x       = "Dates") +
+  scale_y_continuous(labels = scales::percent) +
+  theme(legend.position = "bottom",
+        legend.title    = element_blank()) +
+  facet_wrap( ~ Type,  ncol = 3, strip.position = "left")
+
+# All in the same plot
+DB_Global %>%
+  dplyr::filter(date %>% lubridate::year() >= (Sys.Date() %>% lubridate::year()) - Num_Years) %>%
+  dplyr::mutate(Type = ifelse(Type == "Pct_MA_50", "Above 50 SMA",
+                              ifelse(Type == "Pct_MA_100", "Above 100 SMA", "Above 200 SMA"))) %>%
+  ggplot(aes(x = date, y = Percentage, colour = Type)) +
+  geom_line(size = 1) +
+  scale_color_viridis_d(end = 0.9) +
+  theme_minimal() +
+  labs(title = "SP500 - Momentum Analysis (Percentage of companies above their Simple Moving Average)",
+       subtitle = str_glue("Above SMA50: {Last_MA_50}. Above SMA100: {Last_MA_100}. Above SMA200: {Last_MA_200}"),
+       caption = "By: Carlos Jimenez\nSource: Yahoo Finance",
+       y       = "Percentage of Companies",
+       x       = "Dates") +
+  scale_y_continuous(labels = scales::percent) +
+  theme(legend.position = "bottom",
+        legend.title    = element_blank())
